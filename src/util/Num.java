@@ -1,19 +1,19 @@
 package util;
 
-/** Свои парсер и форматтер double. */
+/** Свои парсер, форматтер double и split. Без сторонних библиотек. */
 public final class Num {
 
     private Num() {}
 
-    // ---------- ПАРСЕР ----------
+    // ================= ПАРСЕР =================
     public static boolean isDouble(String s) {
         try { parse(s); return true; }
         catch (NumberFormatException e) { return false; }
     }
 
     public static double parse(String s) {
-        s = s.trim();
-        if (s.isEmpty()) throw new NumberFormatException("empty");
+        s = trim(s);
+        if (s.length() == 0) throw new NumberFormatException("empty");
 
         int i = 0, len = s.length();
         boolean neg = false;
@@ -63,23 +63,23 @@ public final class Num {
             if (!expDigits) throw new NumberFormatException("bad exp");
             if (expNeg) exp = -exp;
             double p = 1;
-            for (int k = 0; k < (exp < 0 ? -exp : exp); k++) p *= 10;
+            int n = exp < 0 ? -exp : exp;
+            for (int k = 0; k < n; k++) p *= 10;
             result = exp < 0 ? result / p : result * p;
         }
 
         if (i != len) throw new NumberFormatException("trailing");
-        if (result != result || result == Double.POSITIVE_INFINITY
-                || result == Double.NEGATIVE_INFINITY)
+        if (result != result || result == 1.0/0.0 || result == -1.0/0.0)
             throw new NumberFormatException("overflow");
 
         return neg ? -result : result;
     }
 
-    // ---------- ФОРМАТТЕР ----------
+    // ================= ФОРМАТТЕР =================
     public static String format(double v) {
         if (v != v) return "NaN";
-        if (v == Double.POSITIVE_INFINITY) return "Infinity";
-        if (v == Double.NEGATIVE_INFINITY) return "-Infinity";
+        if (v == 1.0/0.0) return "Infinity";
+        if (v == -1.0/0.0) return "-Infinity";
 
         boolean neg = v < 0;
         if (neg) v = -v;
@@ -89,23 +89,34 @@ public final class Num {
 
         if (fracPart < 1e-12) return (neg ? "-" : "") + intPart;
 
-        StringBuilder frac = new StringBuilder();
-        double f = fracPart;
-        for (int d = 0; d < 10 && f > 1e-12; d++) {
-            f *= 10;
-            int digit = (int) f;
-            frac.append((char) ('0' + digit));
-            f -= digit;
+        // округляем до 6 знаков
+        int digits = 6;
+        double scale = 1;
+        for (int k = 0; k < digits; k++) scale *= 10;
+        long roundedFrac = (long) (fracPart * scale + 0.5);
+        if (roundedFrac >= (long) scale) {
+            intPart++;
+            roundedFrac = 0;
         }
-        int end = frac.length();
-        while (end > 0 && frac.charAt(end - 1) == '0') end--;
-        frac.setLength(end);
+        if (roundedFrac == 0) return (neg ? "-" : "") + intPart;
 
-        String res = intPart + (end == 0 ? "" : "." + frac);
-        return neg ? "-" + res : res;
+        char[] buf = new char[digits];
+        long f = roundedFrac;
+        for (int k = digits - 1; k >= 0; k--) {
+            buf[k] = (char) ('0' + (int) (f % 10));
+            f /= 10;
+        }
+        int end = digits;
+        while (end > 0 && buf[end - 1] == '0') end--;
+
+        StringBuilder sb = new StringBuilder();
+        if (neg) sb.append('-');
+        sb.append(intPart).append('.');
+        for (int k = 0; k < end; k++) sb.append(buf[k]);
+        return sb.toString();
     }
 
-    // ---------- SPLIT ----------
+    // ================= SPLIT =================
     public static String[] split(String s) {
         int count = 0;
         boolean inTok = false;
@@ -123,6 +134,17 @@ public final class Num {
             } else cur.append(c);
         }
         return out;
+    }
+
+    // ================= TRIM =================
+    public static String trim(String s) {
+        int a = 0, b = s.length();
+        while (a < b && s.charAt(a) <= ' ') a++;
+        while (b > a && s.charAt(b - 1) <= ' ') b--;
+        if (a == 0 && b == s.length()) return s;
+        char[] buf = new char[b - a];
+        for (int k = 0; k < buf.length; k++) buf[k] = s.charAt(a + k);
+        return new String(buf);
     }
 
     private static boolean isDigit(char c) { return c >= '0' && c <= '9'; }

@@ -5,10 +5,6 @@ import util.Num;
 public class Main {
 
     public static void main(String[] args) {
-        try {
-            System.setOut(new java.io.PrintStream(System.out, true, "UTF-8"));
-        } catch (Exception ignored) {}
-
         System.out.println("=== Дублирование положительных чисел ===");
         System.out.println("(введите числа через пробел или запятую)");
 
@@ -16,9 +12,9 @@ public class Main {
 
         while (list == null) {
             System.out.print("Введите список: ");
-            String line = Console.readLine().trim();
+            String line = Num.trim(Console.readLine());
 
-            if (line.isEmpty()) {
+            if (line.length() == 0) {
                 System.out.println("  [!] Пусто — попробуйте снова.");
                 continue;
             }
